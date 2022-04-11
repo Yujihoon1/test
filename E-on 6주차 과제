@@ -1,0 +1,41 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <iostream>
+#include <stdio.h>
+#include <string>
+#include <stdlib.h>
+
+using namespace std;
+
+
+
+int pizza=0;
+
+int main()
+{
+	int pizza = 0;
+	printf("피자 조각 갯수를 입력하시오 :");
+	scanf("%d", &pizza);
+
+	printf("피자 조각은 %d의 방법으로 분배 가능 ", divide());
+}
+
+long factorial(int pizza)
+{
+	if (pizza == 0 || pizza == 1)
+		return 1;
+
+	return (pizza * factorial(pizza - 1));
+}
+int divide();
+
+int divide()
+{
+	int result = 0;
+	for (int i = 0; i <= pizza / 2; i++)
+	{
+		result = result + factorial(pizza - i) / ((factorial(pizza - i)*factorial(i))) ;
+	}
+	return result;
+	
+	
+}
