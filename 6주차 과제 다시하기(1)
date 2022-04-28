@@ -1,0 +1,62 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+
+
+using namespace std;
+
+int PizzaNum();
+int Divide(int);
+int Calculation(int, int);
+
+int PizzaNum()
+{
+	int pizzanumber = 0;
+
+	printf("피자 조각 갯수를 입력하시오 :");
+	scanf_s("%d", &pizzanumber, sizeof(pizzanumber));
+
+	return pizzanumber;
+
+
+int main()
+{
+	int num = PizzaNum();
+	int result = Divide(num);
+	printf("피자 조각은 %d의 방법으로 분배 가능 ", result);
+	return 0;
+}
+
+
+
+int Divide(int pizzanumber)
+{
+	int sum = 0;
+
+	for (int i = 0; i <= pizzanumber/2 ; i++)
+	{
+		int iValue1 = pizzanumber  - i;
+		sum += Calculation(iValue1, i);
+
+	}
+
+	return sum;
+	
+}
+
+int Calculation(int iValue1, int iValue2)
+{
+	int result = 0;
+	int	numerator = 1;
+	int denominator = 1;
+
+
+	for (int i = 0; i < iValue2; i++)
+	{
+		numerator *= (iValue1 - i);
+		denominator *= (iValue2 - i);
+	}
+
+	result = numerator / denominator;
+
+	return result;
+}
