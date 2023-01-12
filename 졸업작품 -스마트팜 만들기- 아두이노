@@ -1,0 +1,205 @@
+#include <SoftwareSerial.h>
+#include "DHT.h"  //DHT 라이브러리
+#include "MQ135.h" //MQ135 라이브러리
+
+#define DHTPIN 2        // 핀의 설정  //2번 온습도
+#define DHTTYPE DHT22   // DHT22 센서종류 설정
+
+#define MQ135PIN A0
+#define RZER0 206.85
+
+#define BT_RX 18
+#define BT_TX 19
+
+int relay = 8;        //릴레이단자1 (환풍기)
+int relay2 = 4;       //릴레이단자2 (히터)
+//(2번- 온습도)(3번- 릴레이4-환풍기 fan) (4번- 릴레이2/히터) (릴레이3 - 5번-펌프) (6번-블루투스) (7번-버튼1(블루투스 on/off)) (8번-릴레이1/환풍기)(9번-스피커)
+//(11번-버튼2 환풍기 on/off)(12번-버튼3 히터 on/off)(13번-버튼4 펌프 on/off)(A0-이산화탄소) (A1-토양습도) (A2-수위측정) 
+int pump = 5;
+int hiterfan = 3;
+int bluetoothPower = 6;
+int button = 7; //블루투스 및 수동모드
+int cds = analogRead(A3); //A3으로 들어오는 값을 cds에 저장 (조도)
+DHT dht(DHTPIN, DHTTYPE);
+int button2 = 11;  //환풍기 연결 버튼
+int button3 = 12;  //히터 연결 버튼
+int button4 = 13; //펌프 연결 버튼
+int melody[] =    {262, 294, 330, 349, 392, 440, 494, 523};
+
+void setup() {
+
+
+  Serial.begin(9600);
+  Serial1.begin(9600);
+ 
+
+  Serial.println("DHT22 RELAY FAN !!!"); // 온습도 센서 시작
+  dht.begin();
+
+  pinMode (relay, OUTPUT);
+  pinMode (relay2, OUTPUT);
+  pinMode (DHTPIN, OUTPUT); // 온습도 센서 끝
+  //pinMode (MQ135PIN, OUTPUT);
+  pinMode(pump, OUTPUT);
+  pinMode(cds, OUTPUT);
+  pinMode(bluetoothPower, OUTPUT);
+ pinMode(button,INPUT_PULLUP); 
+ pinMode(hiterfan, OUTPUT);
+ pinMode(button2,INPUT_PULLUP); 
+ pinMode(button3,INPUT_PULLUP); 
+ pinMode(button4,INPUT_PULLUP); 
+}
+
+void loop() {
+
+  MQ135 gasSensor = MQ135(MQ135PIN);
+
+  float rzero = gasSensor.getRZero();
+  float humi = dht.readHumidity();
+  float temp = dht.readTemperature();
+  float PPM = gasSensor.getPPM();
+
+
+ if(digitalRead(button)==LOW)       // 스위치를 누르면
+  {
+    digitalWrite(bluetoothPower,HIGH);   //Bluetooth 켜짐
+
+digitalWrite(hiterfan,HIGH);
+    digitalWrite (relay, HIGH);
+    digitalWrite (relay2, HIGH);
+    digitalWrite(5, 1);
+    digitalWrite(hiterfan , HIGH);
+    
+    if (Serial1.available()) {
+    Serial.write(Serial1.read());
+    } 
+    if (Serial.available()) {
+    Serial1.write(Serial.read());
+    }
+    
+      if(digitalRead(button2)==LOW){
+        digitalWrite (relay, LOW);
+        
+  }
+   else if(digitalRead(button2)==HIGH){
+        digitalWrite (relay, HIGH);
+       
+  }
+    if(digitalRead(button3)==LOW){
+        digitalWrite (relay2, LOW);
+        digitalWrite (hiterfan, LOW);
+      
+  }
+   else if(digitalRead(button3)==HIGH){
+        digitalWrite (relay2, HIGH);
+        digitalWrite (hiterfan, HIGH);
+       
+  }
+   if(digitalRead(button4)==LOW){
+        digitalWrite (pump, LOW);
+       
+  }
+   else if(digitalRead(button4)==HIGH){
+        digitalWrite (pump, HIGH);
+       
+  }
+
+  return;
+  }
+else
+{
+  digitalWrite (bluetoothPower, LOW);
+  Serial.print("CO2 ppm value : ");
+  Serial.println(PPM);
+
+  if (isnan(temp) || isnan(humi)) {
+    //값 읽기 실패시 시리얼 모니터 출력
+    Serial.println("Failed to read from DHT");
+  } else {
+    //습도, 온도, 불쾌지수 시리얼 모니터 출력
+    Serial.print("Humi: ");
+    Serial.print(humi);
+    Serial.print(" %\t");
+    Serial.print("Temp: ");
+    Serial.print(temp);
+    Serial.print(" *C");
+    Serial.print(" \t");
+
+    if (temp > 30)
+    {
+      digitalWrite (relay, LOW);
+      digitalWrite (relay2, HIGH);
+      digitalWrite (hiterfan, HIGH);
+    
+    }
+    else if (10 < temp < 30) {
+      digitalWrite (relay, HIGH);
+      digitalWrite (relay2, HIGH);
+      digitalWrite (hiterfan, HIGH);
+    }
+    else  {
+      digitalWrite (relay, HIGH);
+      digitalWrite (relay2, LOW);
+      digitalWrite (hiterfan, LOW);
+    }
+    if (PPM > 1.0) {
+      digitalWrite (relay, LOW);
+      digitalWrite (relay2, HIGH);
+      digitalWrite (hiterfan, HIGH);
+    }
+    else if (temp > 20 & PPM > 1.0) {
+      digitalWrite (relay, LOW);
+      digitalWrite (relay2, HIGH);
+      digitalWrite (hiterfan, HIGH);
+    }
+    else if (temp < 10 & PPM < 1.0) {
+      digitalWrite (relay, HIGH);
+      digitalWrite (relay2, LOW);
+      digitalWrite (hiterfan, LOW);
+    }
+    else if (temp < 10 & PPM > 1.0) {
+      digitalWrite (relay, LOW);
+      digitalWrite (relay2, LOW);
+      digitalWrite (hiterfan, LOW);
+    }
+    else {
+      digitalWrite (relay, HIGH);
+      digitalWrite (relay2, LOW);
+      digitalWrite (hiterfan, LOW);
+    }
+  }
+  int level = analogRead(A2);  // 수위센서의 신호를 측정합니다.
+  Serial.print("수위센서:");
+  Serial.println(level);   //시리얼 모니터에 값을 출력합니다.
+
+  int data1 = analogRead(A1); // 수분토양 센서
+  // int data2 = map(data1, 170, 1023, 100, 0); // 수분토양
+  Serial.print("수분토양센서:");
+  Serial.println(data1);
+  if (data1 < 750) {
+    if (level > 300) {
+      digitalWrite(5, 0);
+      delay(1000);
+      return;
+    }
+    else {
+      digitalWrite(5, 1);
+     for (int i = 0; i < 8; i++) {
+    tone(9, melody[i], 250); //9번 마이크
+    delay(500);
+    noTone(9);
+     }
+      return;
+     }
+  }
+  else {
+    digitalWrite(5, 1);
+    return;
+  }
+  
+return;
+  delay(200);
+}
+
+   return;
+  }
